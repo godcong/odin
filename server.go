@@ -1,0 +1,7 @@
+package odin
+
+
+func ValidateAuthroize()  {
+	
+}
+
