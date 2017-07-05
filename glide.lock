@@ -1,0 +1,6 @@
+hash: 8988c550a6798455f6536f9aa55d7ec18ebdda30f7d8741c8d1d21a4b4050be7
+updated: 2017-07-05T16:24:18.9286081+08:00
+imports:
+- name: github.com/satori/go.uuid
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+testImports: []

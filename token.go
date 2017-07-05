@@ -1,5 +1,12 @@
 package odin
 
+import (
+	"bytes"
+	"encoding/base64"
+	"strconv"
+	"strings"
+)
+
 var (
 	/*
 	   client_id	Required. The client application's id.
@@ -18,3 +25,27 @@ var (
 	*/
 	TokenResponseList = []string{}
 )
+
+func AuthorizeGenerateToken(cid, uid string) (code string) {
+	buf := bytes.NewBufferString(cid)
+	buf.WriteString(uid)
+
+	token := uuid.NewV3(uuid.NewV1(), buf.String())
+	code = base64.URLEncoding.EncodeToString(token.Bytes())
+	code = TOKEN_PREFIX + strings.ToUpper(strings.TrimRight(code, "="))
+	return
+}
+
+func AccessGenerateToken(cid, uid string, nano int64, genRefresh bool) (access, refresh string) {
+	buf := bytes.NewBufferString(cid)
+	buf.WriteString(uid)
+	buf.WriteString(strconv.FormatInt(nano, 10))
+
+	access = base64.URLEncoding.EncodeToString(uuid.NewV3(uuid.NewV4(), buf.String()).Bytes())
+	access = TOKEN_PREFIX + strings.ToUpper(strings.TrimRight(access, "="))
+	if genRefresh {
+		refresh = base64.URLEncoding.EncodeToString(uuid.NewV5(uuid.NewV4(), buf.String()).Bytes())
+		refresh = TOKEN_PREFIX + strings.ToUpper(strings.TrimRight(refresh, "="))
+	}
+	return
+}

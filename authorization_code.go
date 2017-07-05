@@ -124,3 +124,4 @@ func (a *Authorization) ResponseUri() string {
 
 	return strings.Join(s, "&")
 }
+
