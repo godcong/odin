@@ -3,7 +3,6 @@ package odin
 import (
 	"log"
 	"net/url"
-	"reflect"
 	"testing"
 )
 
@@ -21,6 +20,5 @@ func TestNewAuthorizationRequest(t *testing.T) {
 func TestAuthorization_ResponseUri(t *testing.T) {
 	auth := NewAuthorization(v)
 	log.Println(auth.ResponseUri())
-
 
 }
