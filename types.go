@@ -16,32 +16,25 @@ const (
 	//Implicit GrantType = "__implicit"
 )
 
-//type AuthorizationResponseState int
-//
-//const (
-//	AUTHORIZATION_SUCCESS AuthorizationResponseState = 0
-//	AUTHORIZATION_ERROR   AuthorizationResponseState = 1
-//)
-
 type TokenRequest struct {
 }
 type TokenResponse struct {
 }
 
-//type AccessToken struct {
-//}
-//
-//type RefreshToken struct {
-//}
-
-//type ClientTypes string
-//
-//const (
-//	Confidential ClientTypes = "confidential"
-//	Public       ClientTypes = "public"
-//)
-
 type ErrorResponseType string
+
+//defined column name to const
+const (
+	CN_RESPONSETYPE      = "response_type"
+	CN_CLIENTID          = "client_id"
+	CN_REDIRECTURI       = "redirect_uri"
+	CN_SCOPE             = "scope"
+	CN_STATE             = "state"
+	CN_CODE              = "code"
+	CN_ERROR             = "error"
+	CN_ERROR_DESCRIPTION = "error_description"
+	CN_ERROR_URI         = "error_uri"
+)
 
 const (
 	//invalid_request
@@ -102,9 +95,6 @@ func AuthorizationResponseError(e ErrorResponseType) ErrorMessage {
 	}
 
 	return errors[ErrorTypeInvalidRequest]
-}
-
-type ErrorReponse struct {
 }
 
 //ErrInvalidRequest:          400,

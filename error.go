@@ -34,7 +34,6 @@ var ERROR_MAP = map[int]error{
 	E_INVALID_NONE:              nil,
 }
 
-
 /*
 For example, the authorization server redirects the user-agent by
 sending the following HTTP response:
@@ -49,19 +48,22 @@ type ErrorResponse struct {
 	State            string `json:"state"`
 }
 
-func (e *ErrorResponse) Encode() string {
-	b, _ := json.Marshal(e)
-	return string(b)
+func EncodeER(e *ErrorResponse) (string, error) {
+	b, err := json.Marshal(e)
+	return string(b), err
 }
 
-func Decode(t, s string) interface{} {
-	return nil
+func DecodeER(s string) (*ErrorResponse, error) {
+	e := new(ErrorResponse)
+	err := json.Unmarshal([]byte(s), e)
+	return e, err
 }
 
-func ErrorResponseDecode(s string) *ErrorResponse {
-	v := ErrorResponse{}
-	if err := json.Unmarshal(([]byte)(s), &v); err == nil {
-		return &v
-	}
-	return nil
-}
+//
+//func ErrorResponseDecode(s string) *ErrorResponse {
+//	v := ErrorResponse{}
+//	if err := json.Unmarshal(([]byte)(s), &v); err == nil {
+//		return &v
+//	}
+//	return nil
+//}
