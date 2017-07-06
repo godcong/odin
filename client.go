@@ -2,13 +2,13 @@ package odin
 
 type Client interface {
 	ID() string
-	SetID(string)
+	//SetID(string)
 	Uri() string
-	SetUri(string)
+	//SetUri(string)
 	Secret() string
-	SetSecret(string)
-	Custom() string
-	SetCustom(string)
+	//SetSecret(string)
+	Custom() interface{}
+	//SetCustom(string)
 }
 
 type client struct {
@@ -19,10 +19,6 @@ type client struct {
 }
 
 func NewClient() *client {
-	return NewClient()
-}
-
-func DefaultClient() *client {
 	return new(client)
 }
 
@@ -46,9 +42,9 @@ func (c *client) Secret() string {
 func (c *client) SetSecret(string) {
 
 }
-func (c *client) Custom() string {
+func (c *client) Custom() interface{} {
 	return ""
 }
-func (c *client) SetCustom(string) {
+func (c *client) SetCustom(interface{}) {
 
 }

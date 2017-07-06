@@ -58,12 +58,3 @@ func DecodeER(s string) (*ErrorResponse, error) {
 	err := json.Unmarshal([]byte(s), e)
 	return e, err
 }
-
-//
-//func ErrorResponseDecode(s string) *ErrorResponse {
-//	v := ErrorResponse{}
-//	if err := json.Unmarshal(([]byte)(s), &v); err == nil {
-//		return &v
-//	}
-//	return nil
-//}

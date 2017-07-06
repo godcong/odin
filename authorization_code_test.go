@@ -7,7 +7,7 @@ import (
 )
 
 var v = url.Values{
-	"111":           []string{"111"},
+	"client_id":     []string{"111"},
 	"response_type": []string{"222"},
 }
 
@@ -19,6 +19,15 @@ func TestNewAuthorizationRequest(t *testing.T) {
 
 func TestAuthorization_ResponseUri(t *testing.T) {
 	auth := NewAuthorization(v)
-	log.Println(auth.ResponseUri())
+	log.Println(auth.ResponseUri(
+		map[string]string{
+			"1234": "aaaaa",
+			"2234": "bbbbb",
+		},
+		map[string]string{
+			"3234": "aaaaa",
+			"4234": "bbbbb",
+		},
+	))
 
 }

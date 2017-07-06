@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"strconv"
-	"strings"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 var (
@@ -26,26 +27,15 @@ var (
 	TokenResponseList = []string{}
 )
 
-func AuthorizeGenerateToken(cid, uid string) (code string) {
-	buf := bytes.NewBufferString(cid)
-	buf.WriteString(uid)
 
-	token := uuid.NewV3(uuid.NewV1(), buf.String())
-	code = base64.URLEncoding.EncodeToString(token.Bytes())
-	code = TOKEN_PREFIX + strings.ToUpper(strings.TrimRight(code, "="))
-	return
-}
-
-func AccessGenerateToken(cid, uid string, nano int64, genRefresh bool) (access, refresh string) {
+func GenerateToken(cid, uid string, nano int64, genRefresh bool) (access, refresh string) {
 	buf := bytes.NewBufferString(cid)
 	buf.WriteString(uid)
 	buf.WriteString(strconv.FormatInt(nano, 10))
 
-	access = base64.URLEncoding.EncodeToString(uuid.NewV3(uuid.NewV4(), buf.String()).Bytes())
-	access = TOKEN_PREFIX + strings.ToUpper(strings.TrimRight(access, "="))
+	access = base64.RawURLEncoding.EncodeToString(uuid.NewV3(uuid.NewV4(), buf.String()).Bytes())
 	if genRefresh {
-		refresh = base64.URLEncoding.EncodeToString(uuid.NewV5(uuid.NewV4(), buf.String()).Bytes())
-		refresh = TOKEN_PREFIX + strings.ToUpper(strings.TrimRight(refresh, "="))
+		refresh = base64.RawURLEncoding.EncodeToString(uuid.NewV5(uuid.NewV4(), buf.String()).Bytes())
 	}
 	return
 }
