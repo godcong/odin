@@ -11,8 +11,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-type ResponseCode string
-
 //response_type	Required. Must be set to code
 //client_id	Required. The client identifier as assigned by the authorization server, when the client was registered.
 //redirect_uri	Optional. The redirect URI registered by the client.
@@ -23,12 +21,15 @@ type Authorization struct {
 	Response         map[string]string
 	Error            map[string]string
 	client           Client
+	user             User
 	clientCallback   ClientCallback
+	userCallback     UserCallback
 	validateCallback ValidateCallback
 }
 
 type ValidateCallback func(Authorization) error
 type ClientCallback func(Authorization) Client
+type UserCallback func(Authorization) User
 
 var (
 	/*
@@ -60,7 +61,6 @@ var (
 	AuthorizationInitializeError = errors.New("Authorization initialize error with some unknown type!")
 )
 
-
 func NewAuthorization(values ...interface{}) *Authorization {
 	auth := new(Authorization)
 	auth.Request = make(map[string]string)
@@ -85,8 +85,14 @@ func initialize(authorization *Authorization, values ...interface{}) (*Authoriza
 		case url.Values:
 			for _, v := range authorizationRequestList {
 				val := val.(url.Values)
-				if val.Get(v) != "" {
-					authorization.Request[v] = val.Get(v)
+				if gv := val.Get(v); gv != "" {
+					if gv == CN_REDIRECTURI {
+						if qu, e := url.QueryUnescape(gv); e == nil {
+							authorization.Request[v] = qu
+							continue
+						}
+					}
+					authorization.Request[v] = gv
 				}
 			}
 		case ValidateCallback:
