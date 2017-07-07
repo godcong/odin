@@ -11,25 +11,35 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+type Authorization interface {
+	Request() map[string]string
+}
+
 //response_type	Required. Must be set to code
 //client_id	Required. The client identifier as assigned by the authorization server, when the client was registered.
 //redirect_uri	Optional. The redirect URI registered by the client.
 //scope	Optional. The possible scope of the request.
 //state	Optional (recommended). Any client state that needs to be passed on to the client request URI.
-type Authorization struct {
-	Request          map[string]string
-	Response         map[string]string
-	Error            map[string]string
-	client           Client
-	user             User
-	clientCallback   ClientCallback
-	userCallback     UserCallback
-	validateCallback ValidateCallback
+type authorization struct {
+	Request  map[string]string
+	Response map[string]string
+	Error    map[string]string
+	client   Client
+	user     User
+	//clientCallback   ClientCallback
+	//userCallback     UserCallback
+	//validateCallback ValidateCallback
 }
 
 type ValidateCallback func(Authorization) error
 type ClientCallback func(Authorization) Client
 type UserCallback func(Authorization) User
+
+var (
+	vc ValidateCallback
+	cc ClientCallback
+	uc UserCallback
+)
 
 var (
 	/*
@@ -61,8 +71,8 @@ var (
 	AuthorizationInitializeError = errors.New("Authorization initialize error with some unknown type!")
 )
 
-func NewAuthorization(values ...interface{}) *Authorization {
-	auth := new(Authorization)
+func NewAuthorization(values ...interface{}) Authorization {
+	auth := new(authorization)
 	auth.Request = make(map[string]string)
 	auth.Response = make(map[string]string)
 
@@ -73,10 +83,12 @@ func NewAuthorization(values ...interface{}) *Authorization {
 	return a
 }
 
-func initialize(authorization *Authorization, values ...interface{}) (*Authorization, error) {
+func initialize(authorization Authorization, values ...interface{}) (Authorization, error) {
 	var e error
-	authorization.validateCallback = defaultValidate
-	authorization.clientCallback = defaultClient
+	vc = defaultValidate
+	cc = defaultClient
+	uc = defaultUser
+
 	if values == nil {
 		return authorization, nil
 	}
@@ -96,9 +108,10 @@ func initialize(authorization *Authorization, values ...interface{}) (*Authoriza
 				}
 			}
 		case ValidateCallback:
-			authorization.validateCallback = val.(ValidateCallback)
+			SetValidateCallback(val.(ValidateCallback))
 		case ClientCallback:
-			authorization.clientCallback = val.(ClientCallback)
+			SetClientCallback(val.(ClientCallback))
+
 		case Client:
 		default:
 			e = AuthorizationInitializeError
@@ -108,7 +121,7 @@ func initialize(authorization *Authorization, values ...interface{}) (*Authoriza
 	return authorization, e
 }
 
-func (a *Authorization) ParseRequest(values url.Values) {
+func (a *authorization) ParseRequest(values url.Values) {
 	for _, v := range authorizationRequestList {
 		if values.Get(v) != "" {
 			a.Request[v] = values.Get(v)
@@ -116,32 +129,49 @@ func (a *Authorization) ParseRequest(values url.Values) {
 	}
 }
 
-func (a *Authorization) SetCallback(c ValidateCallback) *Authorization {
-	a.validateCallback = c
-	return a
+func SetValidateCallback(callback ValidateCallback) {
+	vc = callback
 }
 
-func (a *Authorization) SetClientCallback() {
-
-}
-func (a *Authorization) SetUserCallback() {
-
+func (a *authorization) SetValidateCallback(callback ValidateCallback) {
+	SetValidateCallback(callback)
 }
 
-func (a *Authorization) Validate() error {
+func (a *authorization) SetClientCallback(callback ClientCallback) {
+	SetClientCallback(callback)
+}
+
+func SetClientCallback(callback ClientCallback) {
+	cc = callback
+}
+
+func (a *authorization) SetUserCallback(callback UserCallback) {
+	SetUserCallback(callback)
+}
+
+func SetUserCallback(callback UserCallback) {
+	uc = callback
+}
+
+func (a *authorization) Verification() error {
 	if a != nil {
 		return validateClient(a)
 	}
 	return ERROR_MAP[E_UNAUTHORIZED_CLIENT]
 }
 
-func validateClient(auth *Authorization) error {
-	if c := auth.validateCallback; c != nil {
-		return c(*auth)
+func validateClient(auth Authorization) error {
+	if vc != nil {
+		return vc(auth)
 	}
-
 	return nil
 }
+
+func validateUser() {
+
+}
+
+
 
 func (a *Authorization) GetRequest(s string) (v string, b bool) {
 	if a != nil {
@@ -169,13 +199,13 @@ func (a *Authorization) ResponseUri(other ...map[string]string) string {
 		s = append(s, strings.Join([]string{k, v}, "="))
 	}
 
-	if size := len(other); size > 0 {
-		for ; size > 0; size-- {
-			for k, v := range other[size-1] {
-				s = append(s, strings.Join([]string{k, v}, "="))
-			}
-		}
-	}
+	//if size := len(other); size > 0 {
+	//	for ; size > 0; size-- {
+	//		for k, v := range other[size-1] {
+	//			s = append(s, strings.Join([]string{k, v}, "="))
+	//		}
+	//	}
+	//}
 
 	return strings.Join(s, "&")
 }
@@ -200,6 +230,14 @@ func defaultClient(auth Authorization) Client {
 
 func defaultValidate(auth Authorization) error {
 	if auth.Request == nil {
+		return ERROR_MAP[E_INVALID_REQUEST]
+	}
+
+	return nil
+}
+
+func defaultUser(auth Authorization) User {
+	if auth.R == nil {
 		return ERROR_MAP[E_INVALID_REQUEST]
 	}
 

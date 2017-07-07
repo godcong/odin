@@ -1,5 +1,7 @@
 package odin
 
+type AuthorizeRequest map[string]string
+
 type Authorize struct {
 	ResponseType ResponseType
 	Client
@@ -11,5 +13,9 @@ func NewAuthorize() *Authorize {
 
 func (a *Authorize) SetClient(client Client) {
 	a.Client = client
+
+}
+
+func ParseAuthorizeRequest() AuthorizeRequest {
 
 }
