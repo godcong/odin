@@ -7,6 +7,13 @@ const (
 	Token ResponseType = "token"
 )
 
+var (
+	ResponseTypeList = []ResponseType{
+		Code,
+		Token,
+	}
+)
+
 type GrantType string
 
 const (
@@ -146,3 +153,13 @@ func AuthorizationResponseError(e ErrorResponseType) ErrorMessage {
 //invalid_scope
 //The requested scope is invalid, unknown, malformed, or
 //exceeds the scope granted by the resource owner.
+
+func (rt ResponseType) Verify() error {
+	for _, v := range ResponseTypeList {
+		if rt == v {
+			return nil
+		}
+	}
+	return ERROR_MAP[E_UNAUTHORIZED_CLIENT]
+
+}

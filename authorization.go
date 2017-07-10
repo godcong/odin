@@ -1,18 +1,15 @@
 package odin
 
 import (
-	"bytes"
-	"encoding/base64"
-	"net/url"
-	"strings"
-
 	"errors"
-
-	uuid "github.com/satori/go.uuid"
+	"net/url"
 )
 
+type AuthorizationRequest map[string]string
+
 type Authorization interface {
-	Request() map[string]string
+	GetRequest() AuthorizationRequest
+	SetRequest(request AuthorizationRequest) Authorization
 }
 
 //response_type	Required. Must be set to code
@@ -21,22 +18,20 @@ type Authorization interface {
 //scope	Optional. The possible scope of the request.
 //state	Optional (recommended). Any client state that needs to be passed on to the client request URI.
 type authorization struct {
-	Request  map[string]string
-	Response map[string]string
-	Error    map[string]string
-	client   Client
-	user     User
+	request  AuthorizationRequest
+	response map[string]string
+	error    map[string]string
 	//clientCallback   ClientCallback
 	//userCallback     UserCallback
 	//validateCallback ValidateCallback
 }
 
-type ValidateCallback func(Authorization) error
+type ValidationFunc func(Authorization) error
 type ClientCallback func(Authorization) Client
 type UserCallback func(Authorization) User
 
 var (
-	vc ValidateCallback
+	vc ValidationFunc
 	cc ClientCallback
 	uc UserCallback
 )
@@ -73,8 +68,8 @@ var (
 
 func NewAuthorization(values ...interface{}) Authorization {
 	auth := new(authorization)
-	auth.Request = make(map[string]string)
-	auth.Response = make(map[string]string)
+	auth.request = make(map[string]string)
+	auth.response = make(map[string]string)
 
 	a, e := initialize(auth, values)
 	if e != nil {
@@ -83,11 +78,30 @@ func NewAuthorization(values ...interface{}) Authorization {
 	return a
 }
 
+/**
+convert the oauth2 request fields to AuthorizationRequest
+*/
+func ParseAuthorizationRequest(values url.Values) AuthorizationRequest {
+	ar := make(AuthorizationRequest)
+	for _, v := range authorizationRequestList {
+		if gv := values.Get(v); gv != "" {
+			if gv == CN_REDIRECTURI {
+				if qu, e := url.QueryUnescape(gv); e == nil {
+					ar[v] = qu
+					continue
+				}
+			}
+			ar[v] = gv
+		}
+	}
+	return ar
+}
+
 func initialize(authorization Authorization, values ...interface{}) (Authorization, error) {
 	var e error
-	vc = defaultValidate
-	cc = defaultClient
-	uc = defaultUser
+	//vc = defaultValidate
+	//cc = defaultClient
+	//uc = defaultUser
 
 	if values == nil {
 		return authorization, nil
@@ -95,20 +109,9 @@ func initialize(authorization Authorization, values ...interface{}) (Authorizati
 	for _, val := range values {
 		switch val.(type) {
 		case url.Values:
-			for _, v := range authorizationRequestList {
-				val := val.(url.Values)
-				if gv := val.Get(v); gv != "" {
-					if gv == CN_REDIRECTURI {
-						if qu, e := url.QueryUnescape(gv); e == nil {
-							authorization.Request[v] = qu
-							continue
-						}
-					}
-					authorization.Request[v] = gv
-				}
-			}
-		case ValidateCallback:
-			SetValidateCallback(val.(ValidateCallback))
+			ParseAuthorizationRequest(val.(url.Values))
+		case ValidationFunc:
+			SetValidationFunc(val.(ValidationFunc))
 		case ClientCallback:
 			SetClientCallback(val.(ClientCallback))
 
@@ -122,19 +125,24 @@ func initialize(authorization Authorization, values ...interface{}) (Authorizati
 }
 
 func (a *authorization) ParseRequest(values url.Values) {
-	for _, v := range authorizationRequestList {
-		if values.Get(v) != "" {
-			a.Request[v] = values.Get(v)
-		}
-	}
+	a.request = ParseAuthorizationRequest(values)
 }
 
-func SetValidateCallback(callback ValidateCallback) {
+func (a *authorization) SetRequest(request AuthorizationRequest) Authorization {
+	a.request = request
+	return a
+}
+
+func (a *authorization) GetRequest() AuthorizationRequest {
+	return a.request
+}
+
+func SetValidationFunc(callback ValidationFunc) {
 	vc = callback
 }
 
-func (a *authorization) SetValidateCallback(callback ValidateCallback) {
-	SetValidateCallback(callback)
+func (a *authorization) SetValidationFunc(callback ValidationFunc) {
+	SetValidationFunc(callback)
 }
 
 func (a *authorization) SetClientCallback(callback ClientCallback) {
@@ -145,11 +153,11 @@ func SetClientCallback(callback ClientCallback) {
 	cc = callback
 }
 
-func (a *authorization) SetUserCallback(callback UserCallback) {
-	SetUserCallback(callback)
+func (a *authorization) SetUserHandle(callback UserCallback) {
+	SetUserHandle(callback)
 }
 
-func SetUserCallback(callback UserCallback) {
+func SetUserHandle(callback UserCallback) {
 	uc = callback
 }
 
@@ -164,82 +172,5 @@ func validateClient(auth Authorization) error {
 	if vc != nil {
 		return vc(auth)
 	}
-	return nil
-}
-
-func validateUser() {
-
-}
-
-
-
-func (a *Authorization) GetRequest(s string) (v string, b bool) {
-	if a != nil {
-		v, b = (a.Request)[s]
-	}
-	return
-}
-
-func (a *Authorization) MakeResponse() {
-	if v, b := a.GetRequest(CN_STATE); b {
-		a.Response[CN_STATE] = v
-	}
-
-	code := ""
-	if v, b := a.GetRequest(CN_CLIENTID); b {
-		code = generateAuthorizationCode(v, "")
-	}
-	a.Response[CN_CODE] = code
-}
-
-func (a *Authorization) ResponseUri(other ...map[string]string) string {
-	s := []string{}
-	a.MakeResponse()
-	for k, v := range a.Response {
-		s = append(s, strings.Join([]string{k, v}, "="))
-	}
-
-	//if size := len(other); size > 0 {
-	//	for ; size > 0; size-- {
-	//		for k, v := range other[size-1] {
-	//			s = append(s, strings.Join([]string{k, v}, "="))
-	//		}
-	//	}
-	//}
-
-	return strings.Join(s, "&")
-}
-
-func generateAuthorizationCode(cid, uid string) (code string) {
-	buf := bytes.NewBufferString(cid)
-	buf.WriteString(uid)
-
-	token := uuid.NewV3(uuid.NewV1(), buf.String())
-
-	code = base64.RawURLEncoding.EncodeToString(token.Bytes())
-	return
-}
-
-func defaultClient(auth Authorization) Client {
-	c := NewClient()
-	c.ClientID = "1234"
-	c.SecretValue = "1234"
-	c.RedirectUri = "localhost:8080"
-	return c
-}
-
-func defaultValidate(auth Authorization) error {
-	if auth.Request == nil {
-		return ERROR_MAP[E_INVALID_REQUEST]
-	}
-
-	return nil
-}
-
-func defaultUser(auth Authorization) User {
-	if auth.R == nil {
-		return ERROR_MAP[E_INVALID_REQUEST]
-	}
-
 	return nil
 }
