@@ -67,3 +67,4 @@ func defaultUser(authorization Authorization) User {
 	u.id = "user1234"
 	return u
 }
+

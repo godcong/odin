@@ -99,9 +99,6 @@ func ParseAuthorizationRequest(values url.Values) AuthorizationRequest {
 
 func initialize(authorization Authorization, values ...interface{}) (Authorization, error) {
 	var e error
-	//vc = defaultValidate
-	//cc = defaultClient
-	//uc = defaultUser
 
 	if values == nil {
 		return authorization, nil
